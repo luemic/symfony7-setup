@@ -1,36 +1,39 @@
+# PHP 8.2 FPM with required extensions for Symfony and Doctrine (MariaDB)
 FROM php:8.2-fpm-alpine
 
-# Install system dependencies and PHP extensions needed by Symfony
-RUN apk add --no-cache \
+# Install system dependencies and PHP extensions
+RUN set -eux; \
+    apk add --no-cache \
         bash \
         git \
-        unzip \
         icu-dev \
-        libzip-dev \
         oniguruma-dev \
+        libzip-dev \
+        zlib-dev \
         libpng-dev \
-        libjpeg-turbo-dev \
         freetype-dev \
-        curl \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) \
+        libjpeg-turbo-dev \
+        mariadb-client \
+    ; \
+    docker-php-ext-configure gd --with-freetype --with-jpeg; \
+    docker-php-ext-install -j"$(nproc)" \
         intl \
-        zip \
+        pdo \
         pdo_mysql \
-        opcache \
+        zip \
         gd \
-    && rm -rf /var/cache/apk/*
+        opcache \
+    ; \
+    apk add --no-cache --virtual .build-deps $PHPIZE_DEPS linux-headers; \
+    pecl install xdebug-3.3.2; \
+    docker-php-ext-enable xdebug; \
+    apk del .build-deps; \
+    rm -rf /tmp/* /var/cache/apk/* /usr/local/lib/php/doc/* /usr/local/lib/php/test/*
 
-# Install Composer (copy from official image to keep it small)
-COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-WORKDIR /var/www/html
+# PHP configuration
+COPY php.ini /usr/local/etc/php/php.ini
 
-# PHP dev config
-COPY php.ini /usr/local/etc/php/conf.d/php-dev.ini
-
-# Create a non-root user (optional, useful on some systems)
-RUN addgroup -g 1000 symfony && adduser -D -G symfony -u 1000 symfony \
-    && chown -R symfony:symfony /var/www/html
-
-USER symfony
+WORKDIR /var/www/html/project
