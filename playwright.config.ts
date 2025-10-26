@@ -1,0 +1,25 @@
+import { defineConfig, devices } from '@playwright/test';
+
+// Root-level Playwright config so you can run `npx playwright test` from the repository root.
+// It points to the existing E2E tests located under project/tests/e2e/tests
+export default defineConfig({
+  testDir: './project/tests/e2e/tests',
+  timeout: 30_000,
+  expect: { timeout: 5_000 },
+  retries: 0,
+  use: {
+    // Trailing slash is IMPORTANT so that relative navigations like page.goto('login')
+    // resolve to http://localhost:8080/index_test.php/login (and not drop index_test.php)
+    baseURL: process.env.BASE_URL || 'http://localhost:8080/index_test.php/',
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+    actionTimeout: 10_000,
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+});
